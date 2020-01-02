@@ -1,3 +1,5 @@
+// This file copied without modification from Markyparky56's gist at https://gist.github.com/Markyparky56/e0fd43e847ac53068603130df3e8e560
+
 #pragma once
 /*******************************************************************************
   OpenSimplex Noise in C++
