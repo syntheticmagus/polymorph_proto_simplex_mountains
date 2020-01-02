@@ -1,61 +1,65 @@
+#include "morph_opensimplex.h"
 #include "morph_cute_png.h"
 
-#include <iostream>
+#include <algorithm>
 
-namespace
-{
-    using Pixel = std::array<uint8_t, 4>;
+namespace sx = morph_opensimplex;
+namespace cp = morph_cute_png;
 
-    PIPELINE_TYPE(FileName, const char*);
-    PIPELINE_TYPE(PixelsWidth, size_t);
-    PIPELINE_TYPE(PixelsHeight, size_t);
-    PIPELINE_TYPE(PixelsData, std::vector<Pixel>);
-}
-
-PIPELINE_CONTEXT(GenerateImage,
+PIPELINE_CONTEXT(Initialize,
     IN_CONTRACT(),
-    OUT_CONTRACT(PixelsWidth, PixelsHeight, PixelsData));
-template<size_t Width, size_t Height>
-void Run(GenerateImage& context)
-{
-    std::vector<Pixel> pixels{};
-    pixels.resize(Width * Height);
-    for (size_t y = 0; y < Height; ++y)
-    {
-        for (size_t x = 0; x < Width; ++x)
-        {
-            auto& pixel = pixels[x + y * Width];
-            pixel[0] = 255;
-            pixel[1] = 0;
-            pixel[2] = 0;
-            pixel[3] = ((x % 2) != (y % 2) ) ? 255 : 0;
-        }
-    }
+    OUT_CONTRACT(cp::FileName, sx::Width, sx::Height, sx::Frequency));
 
-    context.SetPixelsWidth(Width);
-    context.SetPixelsHeight(Height);
-    context.SetPixelsData(pixels);
-}
-
-PIPELINE_CONTEXT(FileNameSetter,
-    IN_CONTRACT(),
-    OUT_CONTRACT(FileName));
+PIPELINE_CONTEXT(ConvertSimplexMapToPng,
+    IN_CONTRACT(sx::Height, sx::Width, sx::Values),
+    OUT_CONTRACT(cp::PixelsWidth, cp::PixelsHeight, cp::PixelsData));
 
 int main()
 {
-    std::cout << "Hello, world!" << std::endl;
+    struct
+    {
+        const char* FileName{ "C:\\scratch\\cp_output.png" };
+        const size_t Width{ 1024 };
+        const size_t Height{ 1024 };
+        const double Frequency{ 0.01 };
+    } args;
 
-    auto pipeline = Pipeline::First<GenerateImage>([](GenerateImage& context)
+    auto pipeline = Pipeline::First<Initialize>([&args](Initialize& context)
     {
-        Run<256, 256>(context);
-    })->Then<FileNameSetter>([](FileNameSetter& context)
+        context.SetFileName(args.FileName);
+        context.SetWidth(args.Width);
+        context.SetHeight(args.Height);
+        context.SetFrequency(args.Frequency);
+    })->Then<GenerateOpenSimplexMap>([](GenerateOpenSimplexMap& context)
     {
-        context.SetFileName("C:\\scratch\\cp_output.png");
+        Run(context);
+    })->Then<ConvertSimplexMapToPng>([](ConvertSimplexMapToPng& context)
+    {
+        auto& values = context.GetValues();
+
+        std::vector<cp::Pixel> pixels{};
+        pixels.reserve(values.size());
+        std::transform(values.begin(), values.end(), std::back_inserter(pixels), [](double value)
+        {
+            constexpr double MAXVAL = std::numeric_limits<uint8_t>::max();
+            uint8_t byteVal = static_cast<uint8_t>(std::clamp(((value + 1.0) / 2.0) * MAXVAL, 0.0, MAXVAL));
+            return cp::Pixel
+            {
+                byteVal,
+                byteVal,
+                byteVal,
+                std::numeric_limits<uint8_t>::max()
+            };
+        });
+
+        context.SetPixelsWidth(context.GetWidth());
+        context.SetPixelsHeight(context.GetHeight());
+        context.SetPixelsData(pixels);
     })->Then<ExportPng>([](ExportPng& context)
     {
         Run(context);
     });
-    pipeline->Run(pipeline->CreateManyMap());
+    pipeline->Run();
 
     return 0;
 }

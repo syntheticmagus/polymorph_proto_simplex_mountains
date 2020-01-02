@@ -460,7 +460,7 @@ struct PipelineState<OperationT, PipelineState<PriorOperationsT...>>
     // applies, the manymap_from_contract will have to be retired in favor of a different
     // system that tracks and collects, without deletion, the types that will be required
     // throughout the pipeline.
-    manymap_from_contract<Contract> CreateManyMap()
+    manymap_from_contract<Contract> CreateCache()
     {
         return{};
     }
@@ -476,6 +476,11 @@ struct PipelineState<OperationT, PipelineState<PriorOperationsT...>>
 
         OperationT operation{ data };
         m_action(operation);
+    }
+
+    void Run()
+    {
+        Run(CreateCache());
     }
 
     static constexpr const char* OperationName()

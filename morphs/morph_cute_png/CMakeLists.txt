@@ -9,3 +9,7 @@ target_include_directories(morph_cute_png PRIVATE ${PIPELINE_H_INCLUDE_DIR})
 target_include_directories(morph_cute_png PRIVATE ${CUTE_HEADERS_INCLUDE_DIR})
 
 target_include_directories(morph_cute_png PUBLIC "include")
+
+if (MSVC)
+    target_compile_definitions(morph_cute_png PRIVATE _CRT_SECURE_NO_WARNINGS)
+endif()
