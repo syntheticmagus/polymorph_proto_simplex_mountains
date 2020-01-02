@@ -16,3 +16,4 @@ set(SOURCES "main.cpp")
 
 add_executable(simplex_mountains ${SOURCES})
 target_link_libraries(simplex_mountains morph_cute_png)
+target_include_directories(simplex_mountains PRIVATE ${PIPELINE_H_INCLUDE_DIR})
